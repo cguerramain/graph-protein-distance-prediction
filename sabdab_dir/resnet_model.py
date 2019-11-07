@@ -5,6 +5,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from tqdm import tqdm
 from layers.ResNet2D import ResNet2D, ResBlock2D
 from H5AntibodyDataset import h5_antibody_dataloader, H5AntibodyDataset
+from DeviceDataLoader import DeviceDataLoader
 from viz import heatmap2d
 
 
@@ -13,10 +14,10 @@ class AntibodyResNet:
         self.dataset = H5AntibodyDataset(h5file)
         indices = list(range(len(self.dataset)))
         self.train_indices, self.test_indices = indices[len(indices) // 10:], indices[:len(indices) // 10]
-        self.train_loader = data.DataLoader(self.dataset, batch_size=batch_size,
-                                            sampler=SubsetRandomSampler(self.train_indices))
-        self.test_loader = data.DataLoader(self.dataset, batch_size=batch_size,
-                                           sampler=SubsetRandomSampler(self.test_indices))
+        self.train_loader = DeviceDataLoader(data.DataLoader(self.dataset, batch_size=batch_size,
+                                                             sampler=SubsetRandomSampler(self.train_indices)))
+        self.test_loader = DeviceDataLoader(data.DataLoader(self.dataset, batch_size=batch_size,
+                                                            sampler=SubsetRandomSampler(self.test_indices)))
         feature, label = self.dataset[0]
         self.in_planes = feature.shape[0]
         self.out_planes = label.shape[0]
