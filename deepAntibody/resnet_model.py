@@ -3,11 +3,9 @@ import torch.nn as nn
 import torch.utils.data as data
 from torch.utils.data.sampler import SubsetRandomSampler
 from tqdm import tqdm
-from layers.ResNet2D import ResNet2D, ResBlock2D
-from H5AntibodyDataset import h5_antibody_dataloader, H5AntibodyDataset
-from DeviceDataLoader import DeviceDataLoader
+from .layers import ResNet2D, ResBlock2D
+from .data import DeviceDataLoader, H5AntibodyDataset
 from torchsummary import summary
-from viz import heatmap2d
 
 
 class AntibodyResNet:

@@ -2,7 +2,7 @@ import h5py
 import torch
 import torch.utils.data as data
 import torch.nn.functional as F
-from viz import heatmap2d
+from ..viz import heatmap2d
 
 
 class H5AntibodyDataset(data.Dataset):
