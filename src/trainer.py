@@ -43,6 +43,7 @@ def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, e
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     print('Number of parameters: {}'.format(count_parameters(model)))
     input_ = train_loader.dataset[0][0]
+    model = model.to(device, non_blocking=True)
     summary(model, input_size=input_.shape)
     for epoch in range(epochs):
         train_epoch(model, device, train_loader, optimizer, criterion, epoch + 1)
