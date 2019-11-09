@@ -38,7 +38,7 @@ def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, e
     if not device:
         device = get_default_device()
     if not save_file:
-        save_file = '{}_{}.p'.format(model.__class___.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
+        save_file = '{}_{}.p'.format(model.__class__.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
     criterion = nn.CrossEntropyLoss(ignore_index=-1)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     print('Number of parameters: {}'.format(count_parameters(model)))
