@@ -2,7 +2,6 @@ import h5py
 import torch
 import torch.utils.data as data
 import torch.nn.functional as F
-from ..viz import heatmap2d
 
 
 class H5AntibodyDataset(data.Dataset):
@@ -240,6 +239,6 @@ def h5_antibody_dataloader(filename, batch_size=32, **kwargs):
 
 if __name__ == '__main__':
     def main():
-        H5AntibodyDataset('ab_pdbs.h5')
+        H5AntibodyDataset('../../data/ab_pdbs.h5')
     main()
 

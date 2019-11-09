@@ -1,7 +1,7 @@
 import h5py
 import warnings
 import numpy as np
-import pdb_parser as parser
+import .pdb_parser as parser
 from tqdm import tqdm
 from os import listdir, remove
 from os.path import join, isfile
