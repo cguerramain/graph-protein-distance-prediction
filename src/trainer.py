@@ -9,7 +9,7 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, log_in
     model.train()
     total_iters = min(max_iter, len(train_loader))
 
-    model.to(device, non_blocking=True)
+    model = model.to(device, non_blocking=True)
     for batch_idx, (features, labels) in tqdm(enumerate(train_loader), total=total_iters):
         if batch_idx >= max_iter:
             break
@@ -56,10 +56,9 @@ def test(model, device, test_loader, optimizer, criterion, epoch):
     model.eval()
     with torch.no_grad():
         running_loss = 0.
+        model.to(device, non_blocking=True)
         for batch_idx, (features, labels) in tqdm(enumerate(test_loader), total=len(test_loader)):
             features, labels = features.to(device, non_blocking=True), labels.to(device, non_blocking=True)
-            # zero the parameter gradients
-            optimizer.zero_grad()
 
             # forward + backward + optimize
             def handle_batch():
