@@ -57,7 +57,7 @@ def test(model, device, test_loader, optimizer, criterion, epoch):
     model.eval()
     with torch.no_grad():
         running_loss = 0.
-        model.to(device, non_blocking=True)
+        model = model.to(device, non_blocking=True)
         for batch_idx, (features, labels) in tqdm(enumerate(test_loader), total=len(test_loader)):
             features, labels = features.to(device, non_blocking=True), labels.to(device, non_blocking=True)
 
