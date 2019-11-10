@@ -107,6 +107,8 @@ class H5AntibodyDataset(data.Dataset):
         if not indices:
             indices = range(len(self.indices))
 
+        if show_progress:
+            print('Calculating class weights...')
         bin_counts = torch.zeros([self.num_dist_bins], dtype=torch.long)
         for idx in tqdm(indices, disable=(not show_progress)):
             binned_distance_matrix = self.get_distance_matrix(idx)
