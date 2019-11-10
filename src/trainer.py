@@ -43,7 +43,12 @@ def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, e
         device = get_default_device()
     if not save_file:
         save_file = '{}_{}.p'.format(model.__class__.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
-    criterion = nn.CrossEntropyLoss(ignore_index=-1, weight=class_weights)
+    if not class_weights:
+        criterion = nn.CrossEntropyLoss(ignore_index=-1, weight=class_weights)
+    else:
+        class_weights = class_weights.to(device, non_blocking=True)
+        criterion = nn.CrossEntropyLoss(ignore_index=-1, weight=class_weights)
+
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     print('Number of parameters: {}'.format(count_parameters(model)))
     input_ = train_loader.dataset[0][0]
