@@ -37,12 +37,13 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, log_in
                100. * (batch_idx + 1) / len(train_loader), batch_loss))
 
 
-def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, epochs=10, save_file=None, **kwargs):
+def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, epochs=10, class_weights=None,
+                       save_file=None, **kwargs):
     if not device:
         device = get_default_device()
     if not save_file:
         save_file = '{}_{}.p'.format(model.__class__.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
-    criterion = nn.CrossEntropyLoss(ignore_index=-1)
+    criterion = nn.CrossEntropyLoss(ignore_index=-1, weight=class_weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     print('Number of parameters: {}'.format(count_parameters(model)))
     input_ = train_loader.dataset[0][0]
@@ -50,11 +51,11 @@ def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, e
     summary(model, input_size=input_.shape)
     for epoch in range(epochs):
         train_epoch(model, device, train_loader, optimizer, criterion, epoch + 1, **kwargs)
-        test(model, device, test_loader, optimizer, criterion, epoch + 1)
+        test(model, device, test_loader, criterion, epoch + 1)
         torch.save(model.state_dict(), '{}_epoch{}.{}'.format(save_file.split('.')[0], epoch + 1, save_file.split('.')[1]))
 
 
-def test(model, device, test_loader, optimizer, criterion, epoch):
+def test(model, device, test_loader, criterion, epoch):
     if not device:
         device = get_default_device()
     model.eval()

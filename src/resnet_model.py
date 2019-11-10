@@ -34,7 +34,9 @@ class AntibodyResNet(nn.Module):
         return self.model(x)
 
     def train(self, **kwargs):
-        train_and_validate(self.model, self.train_loader, self.test_loader, **kwargs)
+        train_and_validate(self.model, self.train_loader, self.test_loader,
+                           class_weights=self.dataset.get_balanced_class_weights(indices=self.train_indices),
+                           **kwargs)
 
 
 if __name__ == '__main__':
