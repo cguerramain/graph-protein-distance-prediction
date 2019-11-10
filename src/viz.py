@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -49,7 +50,7 @@ def plot_lines(y_vectors, x=None, labels=None, title='Loss', xlabel='',
 
 def heatmap2d(matrix, title='Heatmap', ylabel='', xlabel='', caption='',
               color_min=None, color_max=None, out_file=None, line_indices=None,
-              line_color='r',line_color_other='k',xticks=None,yticks=None):
+              line_color='r', line_color_other='k', xticks=None, yticks=None):
     """Displays the heatmap of a 2D matrix
 
     :param matrix: The matrix to turn into a heat map.
@@ -127,9 +128,43 @@ def heatmap2d(matrix, title='Heatmap', ylabel='', xlabel='', caption='',
         plt.savefig(out_file)
     else:
         plt.show()
-    #rc('text', usetex=False)
+    # rc('text', usetex=False)
 
     plt.close()
+
+
+def binned_matrix(in_tensor, method='max'):
+    """
+    Bins a 3d tensor, in_tensor, of shape (channels, N, N) to an integer tensor,
+    out_tensor, of shape (N, N) where each element out_tensor[i][j] equals the
+    index of the maximum value or the average value of in_tensor[:, i, j].
+    :param in_tensor: The tensor to bin.
+    :type in_tensor: torch.Tensor
+    :param method:
+        The binning method. Can either be 'max' or 'average'. 'max' will
+        assign an element to the bin with the highest probability and 'average'
+        will assign an element to the weighted average of the bins
+    :return:
+    """
+    print(in_tensor[0])
+    in_tensor = nn.Softmax(dim=2)(torch.einsum('cij -> ijc', in_tensor))
+    if method == 'max':
+        # Predict the bins with the highest probability
+        return in_tensor.max(2)[1]
+    elif method == 'avg':
+        # Predict the bin that is closest to the average of the probability dist
+        # predicted_bins[i][j] = round(sum(bin_index * P(bin_index at i,j)))
+        bin_indices = torch.arange(in_tensor.shape[-1]).float()
+        predicted_bins = torch.round(torch.sum(in_tensor.mul(bin_indices),
+                                               dim=len(in_tensor.shape)-1))
+        return predicted_bins
+    else:
+        raise ValueError('method must be in {\'avg\',\'max\'}')
+
+
+def plot_model_output(model, input_, method='max', **kwargs):
+    output = binned_matrix(model(input_)[0], method=method)
+    heatmap2d(output, **kwargs)
 
 
 def _add_caption(label, caption):
@@ -144,4 +179,19 @@ def _add_caption(label, caption):
             caption = r'\textit{\small{' + caption + r'}}'
         full_label = r'\begin{center}' + label + caption + r'\end{center}'
     return full_label
+
+
+if __name__ == '__main__':
+    def main():
+        from resnet_model import AntibodyResNet
+        saved_model = '/home/carlos/projects/graph-protein-distance-prediction/saved_models/Sequential_50blocks_10-11-19_01:34:33_epoch50.p'
+        h5file = '../data/ab_pdbs.h5'
+        resnet = AntibodyResNet(h5file, num_blocks=30)
+        model = resnet.model
+        model.load_state_dict(torch.load(saved_model, map_location=torch.device('cpu')))
+        for feature, label in resnet.dataset:
+            feature = feature.unsqueeze(0)
+            plot_model_output(model, feature, color_min=0, color_max=32)
+            heatmap2d(label, title='Actual Distance Matrix', color_min=0, color_max=32)
+    main()
 

@@ -2,6 +2,7 @@ import h5py
 import torch
 import torch.utils.data as data
 import torch.nn.functional as F
+from tqdm import tqdm
 
 
 class H5AntibodyDataset(data.Dataset):
@@ -93,6 +94,37 @@ class H5AntibodyDataset(data.Dataset):
             combined_sequence=self.get_positional_sequence_information(index),
             distance_matrix=self.get_distance_matrix(index))
 
+    def get_balanced_class_weights(self, indices=None, show_progress=True):
+        """Estimates the weights for unbalanced classes in a onehot encoded dataset
+        Uses the following equation to estimate weights:
+        ``n_samples / (num_bins * torch.bincount(bin))``
+
+        :param sample_percentage:
+            The percentage of the data used when calculating the class weights
+        """
+        if self.num_dist_bins < 0:
+            raise ValueError('The number of bins must be greater than or equal to 1')
+        if not indices:
+            indices = range(len(self.indices))
+
+        bin_counts = torch.zeros([self.num_dist_bins], dtype=torch.long)
+        for idx in tqdm(indices, disable=(not show_progress)):
+            binned_distance_matrix = self.get_distance_matrix(idx)
+            for bins in binned_distance_matrix:
+                # Ignore bins that are -1
+                bin_count = torch.bincount(bins.int() + 1)[1:]
+                bin_counts[:bin_count.size(0)] += bin_count
+
+        denominator = bin_counts * self.num_dist_bins
+        weights = sum(bin_counts) / denominator.float()
+        # If a class was not in the dataset, weigh it as much as the highest
+        # weighted class
+        weights[denominator == 0] = -1  # Get rid of inf values
+        weights[denominator == 0] = max(weights)
+        if show_progress:
+            print('Bin weights: {}'.format(weights))
+        return weights
+
     def _get_chain_ranges(self):
         h5file = self.h5file
         num_slices = len(h5file['pdb_id'])
@@ -123,7 +155,7 @@ class H5AntibodyDataset(data.Dataset):
         indices = []
         for chain_start, chain_end in self.chain_ranges:
             for slice_start in range(chain_start, chain_end + 1):
-                for slice_end in range(slice_start, chain_end + 1):
+                for slice_end in range(chain_start, chain_end + 1):
                     indices.append((slice_start, slice_end))
         return indices
 
