@@ -43,7 +43,7 @@ def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, e
         device = get_default_device()
     if not save_file:
         save_file = '{}_{}.p'.format(model.__class__.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
-    if not class_weights:
+    if class_weights is not None:
         criterion = nn.CrossEntropyLoss(ignore_index=-1, weight=class_weights)
     else:
         class_weights = class_weights.to(device, non_blocking=True)
