@@ -32,9 +32,12 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, log_in
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, (batch_idx + 1) * train_loader.batch_size, len(train_loader.dataset),
                        100. * (batch_idx + 1) / len(train_loader), batch_loss))
+    print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+        epoch, (batch_idx + 1) * train_loader.batch_size, len(train_loader.dataset),
+               100. * (batch_idx + 1) / len(train_loader), batch_loss))
 
 
-def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, epochs=10, save_file=None):
+def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, epochs=10, save_file=None, **kwargs):
     if not device:
         device = get_default_device()
     if not save_file:
@@ -46,9 +49,9 @@ def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, e
     model = model.to(device, non_blocking=True)
     summary(model, input_size=input_.shape)
     for epoch in range(epochs):
-        train_epoch(model, device, train_loader, optimizer, criterion, epoch + 1)
+        train_epoch(model, device, train_loader, optimizer, criterion, epoch + 1, **kwargs)
         test(model, device, test_loader, optimizer, criterion, epoch + 1)
-        torch.save(model.state_dict(), 'epoch{}_'.format(epoch + 1, save_file))
+        torch.save(model.state_dict(), '{}_epoch{}.{}'.format(save_file.split('.')[0], epoch + 1, save_file.split('.')[1]))
 
 
 def test(model, device, test_loader, optimizer, criterion, epoch):
@@ -66,8 +69,6 @@ def test(model, device, test_loader, optimizer, criterion, epoch):
                 """Function done to ensure variables immediately get dealloced"""
                 outputs = model(features)
                 loss = criterion(outputs, labels)
-                loss.backward()
-                optimizer.step()
                 return outputs, float(loss.item())
 
             outputs, batch_loss = handle_batch()
@@ -83,5 +84,4 @@ def get_default_device():
 def count_parameters(model):
     """Counts the number of trainable parameters in a model"""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
 
