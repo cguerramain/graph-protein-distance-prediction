@@ -41,8 +41,8 @@ if __name__ == '__main__':
     def main():
         from datetime import datetime
         h5file = '../data/ab_pdbs.h5'
-        resnet = AntibodyResNet(h5file, num_blocks=10)
-        save_file = '{}_{}.p'.format(resnet.model.__class__.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
-        resnet.train(save_file='/scratch/cguerra5/' + save_file)
+        resnet = AntibodyResNet(h5file, num_blocks=30)
+        save_file = '{}_50blocks_{}.p'.format(resnet.model.__class__.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
+        resnet.train(save_file='/scratch/cguerra5/' + save_file, epochs=50)
     main()
 
