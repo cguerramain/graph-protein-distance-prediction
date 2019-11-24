@@ -74,7 +74,7 @@ class AntibodyGraphResNet(nn.Module):
 
     def train(self, **kwargs):
         train_and_validate(self.model, self.train_loader, self.test_loader,
-                           #class_weights=self.dataset.get_balanced_class_weights(indices=self.train_indices),
+                           class_weights=self.dataset.get_balanced_class_weights(indices=self.train_indices),
                            **kwargs)
 
 
