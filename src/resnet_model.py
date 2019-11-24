@@ -1,9 +1,11 @@
+import pickle
 import torch.nn as nn
 import torch.utils.data as data
 from torch.utils.data.sampler import SubsetRandomSampler
 from layers import ResNet2D, ResBlock2D, Edge2EdgeResNet
 from data import H5AntibodyDataset
 from trainer import train_and_validate
+from os.path import isfile
 
 
 class AntibodyResNet(nn.Module):
@@ -72,9 +74,11 @@ class AntibodyGraphResNet(nn.Module):
     def forward(self, x):
         return self.model(x)
 
-    def train(self, **kwargs):
+    def train(self, class_weights=None, **kwargs):
+        if not class_weights:
+            class_weights = self.dataset.get_balanced_class_weights(indices=self.train_indices)
         train_and_validate(self.model, self.train_loader, self.test_loader,
-                           class_weights=self.dataset.get_balanced_class_weights(indices=self.train_indices),
+                           class_weights=class_weights,
                            **kwargs)
 
 
@@ -84,7 +88,13 @@ if __name__ == '__main__':
         h5file = '../data/ab_pdbs.h5'
         #resnet = AntibodyResNet(h5file, num_blocks=30)
         resnet = AntibodyGraphResNet(h5file, num_blocks=10)
+        weight_file = '/scratch/cguerra5/antibody_weights.p'
+        if isfile(weight_file):
+            class_weights = pickle.load(open(weight_file, 'rb'))
+        else:
+            class_weights = resnet.dataset.get_balanced_class_weights(indices=resnet.train_indices)
+            pickle.dump(class_weights, open(weight_file, 'wb'))
         save_file = '{}_50blocks_{}.p'.format(resnet.model.__class__.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
-        resnet.train(save_file='/scratch/cguerra5/' + save_file, epochs=10)
+        resnet.train(save_file='/scratch/cguerra5/' + save_file, epochs=10, class_weights=class_weights)
     main()
 
