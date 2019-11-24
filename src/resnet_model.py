@@ -90,7 +90,7 @@ if __name__ == '__main__':
         resnet = AntibodyGraphResNet(h5file, num_blocks=10, batch_size=64)
         weight_file = '../data/antibody_weights.p'
         if isfile(weight_file):
-            print('Loading class weights from {}...'.format(weight_file))
+            print('Loading class weights from {} ...'.format(weight_file))
             class_weights = pickle.load(open(weight_file, 'rb'))
         else:
             class_weights = resnet.dataset.get_balanced_class_weights(indices=resnet.train_indices)
