@@ -6,9 +6,9 @@ from tqdm import tqdm
 
 
 class H5AntibodyDataset(data.Dataset):
-    def __init__(self, filename, num_dist_bins=32):
+    def __init__(self, file_name, num_dist_bins=32):
         """
-        :param filename: The h5 file for the antibody data.
+        :param file_name: The h5 file for the antibody data.
         :param onehot_prim:
             Whether or not to onehot-encode the primary structure data.
         :param num_dist_bins:
@@ -17,9 +17,8 @@ class H5AntibodyDataset(data.Dataset):
         """
         super(H5AntibodyDataset, self).__init__()
 
-        self.filename = filename
+        self.h5file_name = file_name
         self.num_dist_bins = num_dist_bins
-        self.h5file = h5py.File(filename, 'r', swmr=True)
 
         self.bins = get_bins(self.num_dist_bins)
         self.squared_bins = [(pow(l, 2), pow(r, 2)) for l, r in self.bins]
@@ -46,11 +45,11 @@ class H5AntibodyDataset(data.Dataset):
 
     def get_pdb_id(self, index):
         h5index1, _ = self.indices[index]
-        return self.h5file['pdb_id'][h5index1]
+        return self.get_h5file()['pdb_id'][h5index1]
 
     def get_chain_id(self, index):
         h5index1, _ = self.indices[index]
-        return self.h5file['chain_id'][h5index1]
+        return self.get_h5file()['chain_id'][h5index1]
 
     def get_mask(self, index):
         h5index1, h5index2 = self.indices[index]
@@ -60,10 +59,15 @@ class H5AntibodyDataset(data.Dataset):
         h5index1, h5index2 = self.indices[index]
         return self._combine_sequences(h5index1, h5index2)
 
+    def get_h5file(self):
+        """Returns a h5py File instance of the dataset - needed for handling multiple threads"""
+        return h5py.File(self.h5file_name, 'r', swmr=True)
+
     def get_distance_matrix(self, index, bin_matrix=True, mask_fill_value=-1):
         h5index1, h5index2 = self.indices[index]
-        h1coords = torch.FloatTensor(self.h5file['tertiary'][h5index1])
-        h2coords = torch.FloatTensor(self.h5file['tertiary'][h5index2])
+        h5file = self.get_h5file()
+        h1coords = torch.FloatTensor(h5file['tertiary'][h5index1])
+        h2coords = torch.FloatTensor(h5file['tertiary'][h5index2])
 
         h1coords = h1coords.unsqueeze(0)
         dist_mat_shape = (h1coords.shape[1], h1coords.shape[1], h1coords.shape[2])
@@ -82,15 +86,16 @@ class H5AntibodyDataset(data.Dataset):
 
     def get_all(self, index):
         h5index1, h5index2 = self.indices[index]
+        h5file = self.get_h5file()
         return dict(
             pdb_id=self.get_pdb_id(index),
             chain_id=self.get_chain_id(index),
-            sequence1=self.h5file['primary'][h5index1],
-            sequence2=self.h5file['primary'][h5index2],
-            indices1=self.h5file['indices'][h5index1],
-            indices2=self.h5file['indices'][h5index2],
-            coords1=self.h5file['tertiary'][h5index1],
-            coords2=self.h5file['tertiary'][h5index2],
+            sequence1=h5file['primary'][h5index1],
+            sequence2=h5file['primary'][h5index2],
+            indices1=h5file['indices'][h5index1],
+            indices2=h5file['indices'][h5index2],
+            coords1=h5file['tertiary'][h5index1],
+            coords2=h5file['tertiary'][h5index2],
             combined_sequence=self.get_positional_sequence_information(index),
             distance_matrix=self.get_distance_matrix(index))
 
@@ -128,7 +133,7 @@ class H5AntibodyDataset(data.Dataset):
         return weights
 
     def _get_chain_ranges(self):
-        h5file = self.h5file
+        h5file = self.get_h5file()
         num_slices = len(h5file['pdb_id'])
         if num_slices == 0:
             return []
@@ -167,7 +172,8 @@ class H5AntibodyDataset(data.Dataset):
         :param h5index2:
         :return:
         """
-        mask1, mask2 = torch.Tensor(self.h5file['mask'][h5index1]), torch.Tensor(self.h5file['mask'][h5index2]) 
+        h5file = self.get_h5file()
+        mask1, mask2 = torch.Tensor(h5file['mask'][h5index1]), torch.Tensor(h5file['mask'][h5index2])
         # Set 1's to 0's and vice versa
         not_mask1 = torch.ones(len(mask1)).type(dtype=mask1.dtype) - mask1
         not_mask2 = torch.ones(len(mask2)).type(dtype=mask2.dtype) - mask2
@@ -192,8 +198,9 @@ class H5AntibodyDataset(data.Dataset):
         :param h5index2:
         :return:
         """
-        seq1, seq2 = torch.LongTensor(self.h5file['primary'][h5index1]), torch.LongTensor(self.h5file['primary'][h5index2])
-        indices1, indices2 = torch.LongTensor(self.h5file['indices'][h5index1]), torch.LongTensor(self.h5file['indices'][h5index2])
+        h5file = self.get_h5file()
+        seq1, seq2 = torch.LongTensor(h5file['primary'][h5index1]), torch.LongTensor(h5file['primary'][h5index2])
+        indices1, indices2 = torch.LongTensor(h5file['indices'][h5index1]), torch.LongTensor(h5file['indices'][h5index2])
 
         n = len(seq1)
         seq_row_expand = seq1.unsqueeze(1).expand(n, n)
