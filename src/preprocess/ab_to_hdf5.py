@@ -1,7 +1,7 @@
 import h5py
 import warnings
 import numpy as np
-import .pdb_parser as parser
+import pdb_parser as parser
 from tqdm import tqdm
 from os import listdir, remove
 from os.path import join, isfile
@@ -113,8 +113,8 @@ def create_datasets(out_file_path, slice_size):
 
 if __name__ == '__main__':
     def main():
-        pdb_dir = 'pdbs/'
-        out_file_path = 'ab_pdbs.h5'
+        pdb_dir = '../../data/pdbs/'
+        out_file_path = '../../data/ab_pdbs.h5'
         antibody_to_h5(pdb_dir, out_file_path, offset=8, print_progress=True)
     main()
 
