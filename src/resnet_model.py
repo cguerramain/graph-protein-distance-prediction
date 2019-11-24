@@ -87,7 +87,7 @@ if __name__ == '__main__':
         from datetime import datetime
         h5file = '../data/ab_pdbs.h5'
         #resnet = AntibodyResNet(h5file, num_blocks=30)
-        resnet = AntibodyGraphResNet(h5file, num_blocks=10)
+        resnet = AntibodyGraphResNet(h5file, num_blocks=10, batch_size=64)
         weight_file = '../data/antibody_weights.p'
         if isfile(weight_file):
             print('Loading class weights from {}...'.format(weight_file))
@@ -96,6 +96,6 @@ if __name__ == '__main__':
             class_weights = resnet.dataset.get_balanced_class_weights(indices=resnet.train_indices)
             pickle.dump(class_weights, open(weight_file, 'wb'))
         save_file = '{}_50blocks_{}.p'.format(resnet.model.__class__.__name__, datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
-        resnet.train(save_file='/scratch/cguerra5/' + save_file, epochs=10, class_weights=class_weights)
+        resnet.train(save_file='/scratch/cguerra5/' + save_file, epochs=10, class_weights=class_weights, lr=0.0001)
     main()
 
