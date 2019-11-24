@@ -28,12 +28,12 @@ if __name__ == '__main__':
             save_file = '../saved_models/{}_{}.p'.format('Antibody_GCNN', datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
 
         resnet = AntibodyGraphResNet(args.h5file, num_blocks=args.num_blocks, batch_size=args.batch_size)
-        if isfile(args.weight_file):
-            print('Loading class weights from {} ...'.format(args.weight_file))
-            class_weights = pickle.load(open(args.weight_file, 'rb'))
+        if isfile(args.class_weight_file):
+            print('Loading class weights from {} ...'.format(args.class_weight_file))
+            class_weights = pickle.load(open(args.class_weight_file, 'rb'))
         else:
             class_weights = resnet.dataset.get_balanced_class_weights(indices=resnet.train_indices)
-            pickle.dump(class_weights, open(args.weight_file, 'wb'))
+            pickle.dump(class_weights, open(args.class_weight_file, 'wb'))
         resnet.train(save_file=save_file, epochs=args.epochs, class_weights=class_weights, lr=args.lr)
 
     main()
