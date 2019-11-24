@@ -23,7 +23,8 @@ class ResBlock2D(nn.Module):
     """
     expansion = 1
 
-    def __init__(self, in_channels, out_channels, kernel_size=(3, 3), stride=1, shortcut=None):
+    def __init__(self, in_channels, out_channels, kernel_size=(3, 3), stride=1, shortcut=None,
+                 activation=F.relu):
         """
         :param in_channels: The number of input channels (features)
         :param out_channels: The number of output channels (features)
@@ -34,10 +35,11 @@ class ResBlock2D(nn.Module):
         super(ResBlock2D, self).__init__()
         if isinstance(kernel_size, int):
             kernel_size = (kernel_size, kernel_size)
+        self.activation = activation
+
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=(stride, 1),
                                padding=(kernel_size[0]//2, kernel_size[1]//2), bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.activation = F.relu
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=kernel_size, stride=(stride, 1),
                                padding=(kernel_size[0]//2, kernel_size[1]//2), bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
@@ -70,7 +72,7 @@ class ResBlock2D(nn.Module):
 
 
 class ResNet2D(nn.Module):
-    def __init__(self, in_channels, block, num_blocks, init_channels=64, kernel_size=3):
+    def __init__(self, in_channels, block, num_blocks, init_channels=64, kernel_size=3, activation=F.relu):
         """
         :param in_channels: The number of channels coming from the input.
         :type in_channels: int
@@ -92,7 +94,7 @@ class ResNet2D(nn.Module):
         if not (init_channels != 0 and ((init_channels & (init_channels - 1)) == 0)):
             raise ValueError('The initial number of planes must be a power of 2')
 
-        self.activation = F.relu
+        self.activation = activation
         self.kernel_size = kernel_size
         self.init_planes = init_channels
         self.in_planes = self.init_planes  # Number of input planes to the final layer

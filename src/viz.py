@@ -86,14 +86,14 @@ def heatmap2d(matrix, title='Heatmap', ylabel='', xlabel='', caption='',
 
     ax = plt.gca()
 
-    if not xticks is None:
+    if not xticks:
         ax.set_xticks(np.arange(len(xticks)))
         ax.set_xticklabels(xticks)
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
                  rotation_mode="anchor")
 
         print(xticks)
-    if not yticks is None:
+    if not yticks:
         ax.set_yticks(np.arange(len(yticks)))
         ax.set_yticklabels(yticks)
         print(yticks)
@@ -162,8 +162,10 @@ def binned_matrix(in_tensor, method='max'):
         raise ValueError('method must be in {\'avg\',\'max\'}')
 
 
-def plot_model_output(model, input_, method='max', **kwargs):
+def plot_model_output(model, input_, mask=None, mask_fill_value=-1, method='max', **kwargs):
     output = binned_matrix(model(input_)[0], method=method)
+    if mask is not None:
+        output[mask] = mask_fill_value
     heatmap2d(output, **kwargs)
 
 
@@ -184,14 +186,16 @@ def _add_caption(label, caption):
 if __name__ == '__main__':
     def main():
         from resnet_model import AntibodyResNet
-        saved_model = '/home/carlos/projects/graph-protein-distance-prediction/saved_models/Sequential_50blocks_10-11-19_01:34:33_epoch50.p'
+        saved_model = '/home/carlos/projects/graph-protein-distance-prediction/saved_models/Sequential_50blocks_10-11-19_15:48:43_epoch19.p'
         h5file = '../data/ab_pdbs.h5'
         resnet = AntibodyResNet(h5file, num_blocks=30)
         model = resnet.model
         model.load_state_dict(torch.load(saved_model, map_location=torch.device('cpu')))
-        for feature, label in resnet.dataset:
+        for i in range(len(resnet.dataset)):
+            feature, label = resnet.dataset[i]
+            mask = resnet.dataset.get_mask(i)
             feature = feature.unsqueeze(0)
-            plot_model_output(model, feature, color_min=0, color_max=32)
+            plot_model_output(model, feature, mask=mask, color_min=0, color_max=32)
             heatmap2d(label, title='Actual Distance Matrix', color_min=0, color_max=32)
     main()
 
