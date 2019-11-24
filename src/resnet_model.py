@@ -75,7 +75,7 @@ class AntibodyGraphResNet(nn.Module):
         return self.model(x)
 
     def train(self, class_weights=None, **kwargs):
-        if not class_weights:
+        if class_weights is None:
             class_weights = self.dataset.get_balanced_class_weights(indices=self.train_indices)
         train_and_validate(self.model, self.train_loader, self.test_loader,
                            class_weights=class_weights,
@@ -88,8 +88,9 @@ if __name__ == '__main__':
         h5file = '../data/ab_pdbs.h5'
         #resnet = AntibodyResNet(h5file, num_blocks=30)
         resnet = AntibodyGraphResNet(h5file, num_blocks=10)
-        weight_file = '/scratch/cguerra5/antibody_weights.p'
+        weight_file = '../data/antibody_weights.p'
         if isfile(weight_file):
+            print('Loading class weights from {}...'.format(weight_file))
             class_weights = pickle.load(open(weight_file, 'rb'))
         else:
             class_weights = resnet.dataset.get_balanced_class_weights(indices=resnet.train_indices)
