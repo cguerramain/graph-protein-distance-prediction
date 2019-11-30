@@ -63,9 +63,7 @@ class AntibodyGraphResNet(nn.Module):
         self.in_channels = feature.shape[0]
         self.out_channels = self.dataset.num_dist_bins
         self.graph_size = label.shape
-        print(self.graph_size)
 
-        kernel_size = (5, 5)
         self.model = nn.Sequential(
             Edge2EdgeResNet(self.in_channels, self.graph_size, num_blocks, init_channels=init_channels),
             Edge2Edge(init_channels * pow(2, len(num_blocks) - 1), self.out_channels, self.graph_size))

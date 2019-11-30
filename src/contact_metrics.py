@@ -15,11 +15,17 @@ def top_k_predictions_(logits, seq_lens, k=2, mask=None, ang8_bin=8):
     :return:
     """
     pairwise_probs = pairwise_contact_probs(logits, mask=mask, ang8_bin=ang8_bin)
-    return [probs[:seq_lens[i] // k] for i, probs in enumerate(pairwise_probs)]
+    print(seq_lens)
+    print(seq_lens.shape)
+    print(seq_lens)
+    if k == 0:
+        return pairwise_probs
+    else:
+        return [probs[:seq_lens[i].int() // k] for i, probs in enumerate(pairwise_probs)]
 
 
-def top_k_contact_metrics(features, logits, dist_mat, seq_lens, k=5, contact_range='long', sequence_position_index1=0,
-                          sequence_position_index2=22, **kwargs):
+def top_k_contact_metrics(features, logits, dist_matrices, seq_lens, k=5, contact_range='long', sequence_position_index1=0,
+                          sequence_position_index2=22, ang8_bin=8, **kwargs):
     """Calculates metrics for the top L/k predicted contacts
     :param logits: The logits to generate probabilities from. Should have shape
                    (batch, logits, n, n).
@@ -29,24 +35,33 @@ def top_k_contact_metrics(features, logits, dist_mat, seq_lens, k=5, contact_ran
     :param kwargs: kwargs to pas to top_k_contacts
     :return:
     """
-    from viz import heatmap2d
+    from src.viz import heatmap2d
     features = torch.einsum('bcij -> bijc', features)
 
     # Get mask from the non-positive distances of the distance matrix
     # (ignores 0 as well because those are not counted in the top-k metric according to CASP)
-    mask = torch.zeros(dist_mat.shape, dtype=torch.uint8)
-    mask[dist_mat > 0] = 1
+    mask = torch.zeros(dist_matrices.shape, dtype=torch.uint8)
+    mask[dist_matrices > 0] = 1
 
     residue_distances = features[:, :, :, sequence_position_index1] - features[:, :, :, sequence_position_index2]
-    print(residue_distances[0])
     residue_distances[~mask] = 0
-    # Use only the top diagonal side of the distance matrix
+    # Use only the bottom diagonal side of the distance matrix,
     residue_distances[residue_distances <= 0] = 0
 
     lower_bound, upper_bound = seperation_ranges[contact_range]
     mask[(residue_distances < lower_bound).__or__(residue_distances > upper_bound)] = 0
-    dist_mat[~mask] = -1
-    heatmap2d(dist_mat[0])
+
+    # Turn sparse representation into dense, byte representation
+    predicted_contacts = top_k_predictions_(logits, seq_lens, k=k, mask=mask, ang8_bin=ang8_bin)
+    print(predicted_contacts)
+
+    indices = torch.stack([predicted_contacts[:, 0], predicted_contacts[:, 1]]).long()
+    values = torch.ones(predicted_contacts.shape[0])
+    predicted_contact_mat = sparse.FloatTensor(indices, values, dist_mat.size())
+    predicted_contact_mat = predicted_contact_mat.to_dense().byte()
+
+    dist_matrices[~mask] = -1
+    true_contact_matrices = (dist_matrices < ang8_bin).__and__(dist_matrices > 0)
 
     # True positive, False positive, False negative calculations
     tp = len(predicted_contact_mat[predicted_contact_mat.__and__(true_contact_mat)])
@@ -107,9 +122,12 @@ def batch_binned_dist_mat_contact_metrics(logits, true_binned_dist_mats, ang8_bi
 def contact_probs(logit_batch, ang8_bin=8):
     """"""
     if len(logit_batch.shape) != 4:
-        raise ValueError('Expected a shape with three dimensions (batch, logits, L, L), got {}'.format(logit_batch.shape))
+        raise ValueError('Expected a shape with four dimensions (batch, logits, L, L), got {}'.format(logit_batch.shape))
     logits_last = torch.einsum('bcij -> bijc', logit_batch)
     probs = nn.Softmax(dim=3)(logits_last)
+
+    torch.set_printoptions(profile="full")
+    print(probs)
     # Sum up the probability that any given residue pair is in contact (<8 Ang.)
     return probs[:, :, :, :ang8_bin+1].sum(3)
 
@@ -152,20 +170,19 @@ def pairwise_contact_probs(logits, mask=None, ang8_bin=8):
 if __name__ == '__main__':
     def main():
         import torch.nn.functional as F
+        import torch.utils.data as data
         from viz import heatmap2d
         from data import H5AntibodyDataset
 
         dataset = H5AntibodyDataset('../data/ab_pdbs.h5')
-        feature, label, index = dataset[0]
-        label += 1
-        label[label < 0] = 0
-        dist_mat = label.clone().unsqueeze(0)
-        [print(_) for _ in dist_mat[0]]
-        label = F.one_hot(dist_mat, num_classes=33)
-        print(label.shape)
-        heatmap2d(dist_mat[0])
-        seq_len = torch.Tensor([dataset.get_sequence_length(index)]).unsqueeze(0)
-        top_k_contact_metrics(feature.unsqueeze(0), label, dist_mat, seq_lens=seq_len, contact_range='short')
+        train_loader = data.DataLoader(dataset, batch_size=3)
+        for feature, label, indices in train_loader:
+            label[label == -1] = 10
+            dist_mat = label.clone()
+            fake_logits = torch.einsum('bijc -> bcij', F.one_hot(dist_mat, num_classes=33)) * 100
+            heatmap2d(dist_mat[0])
+            seq_len = torch.Tensor([train_loader.dataset.get_sequence_length(i) for i in indices])
+            top_k_contact_metrics(feature, fake_logits.float(), dist_mat, seq_lens=seq_len, contact_range='short')
         '''
         logits = torch.rand((4, 3, 5, 20))
         mask = torch.ones((4, 3, 5)).byte()

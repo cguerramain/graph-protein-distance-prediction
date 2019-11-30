@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import pickle
+from collections import defaultdict
 from torchsummary import summary
 from tqdm import tqdm
 from datetime import datetime
@@ -10,6 +12,7 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, log_in
     total_iters = min(max_iter, len(train_loader))
 
     model = model.to(device, non_blocking=True)
+    running_loss = 0.0
     for batch_idx, (features, labels, indices) in tqdm(enumerate(train_loader), total=total_iters):
         if batch_idx >= max_iter:
             break
@@ -28,6 +31,7 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, log_in
             return outputs, float(loss.item())
 
         outputs, batch_loss = handle_batch()
+        running_loss += batch_loss
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, (batch_idx + 1) * train_loader.batch_size, len(train_loader.dataset),
@@ -35,6 +39,7 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, log_in
     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
         epoch, (batch_idx + 1) * train_loader.batch_size, len(train_loader.dataset),
                100. * (batch_idx + 1) / len(train_loader), batch_loss))
+    return running_loss / len(train_loader)
 
 
 def test(model, device, test_loader, criterion, epoch):
@@ -58,6 +63,7 @@ def test(model, device, test_loader, criterion, epoch):
             running_loss += batch_loss
         avg_loss = running_loss / len(test_loader)
         print('Test Epoch: {} \tLoss: {:.6f}'.format(epoch, avg_loss))
+        return avg_loss
 
 
 def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, epochs=10, class_weights=None,
@@ -71,14 +77,21 @@ def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, e
 
     criterion = nn.CrossEntropyLoss(ignore_index=-1, weight=class_weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    print('Number of parameters: {}'.format(count_parameters(model)))
+
     input_ = train_loader.dataset[0][0]
     model = model.to(device, non_blocking=True)
     summary(model, input_size=input_.shape)
+    losses = defaultdict(list)
     for epoch in range(epochs):
-        train_epoch(model, device, train_loader, optimizer, criterion, epoch + 1, **kwargs)
-        test(model, device, test_loader, criterion, epoch + 1)
-        torch.save(model.state_dict(), '{}_epoch{}.{}'.format(save_file.split('.')[0], epoch + 1, save_file.split('.')[1]))
+        train_loss = train_epoch(model, device, train_loader, optimizer, criterion, epoch + 1, **kwargs)
+        test_loss = test(model, device, test_loader, criterion, epoch + 1)
+
+        model_file = '{}_epoch{}.{}'.format(save_file.split('.')[0], epoch + 1, save_file.split('.')[1])
+        loss_file = '{}_epoch{}_loss.{}'.format(save_file.split('.')[0], epoch + 1, save_file.split('.')[1])
+        torch.save(model.state_dict(), model_file)
+        losses['training_losses'].append(train_loss)
+        losses['test_losses'].append(test_loss)
+        pickle.dump(losses, open(loss_file, 'wb'))
 
 
 def get_default_device():

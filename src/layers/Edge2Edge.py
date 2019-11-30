@@ -14,9 +14,10 @@ class Edge2Edge(nn.Module):
         self.horizontal_conv = nn.Conv2d(in_channels, out_channels, kernel_size=(1, width))
 
     def forward(self, x):
+        batch_size, _, height, width = x.shape
         vert_conv = self.vertical_conv(x)
         hort_conv = self.horizontal_conv(x)
-        return vert_conv.expand(x.shape).add(hort_conv)
+        return vert_conv.expand((batch_size, -1, height, width)).add(hort_conv)
 
 
 class Edge2EdgeResBlock(nn.Module):
@@ -84,8 +85,7 @@ class Edge2EdgeResNet(nn.Module):
         self.graph_size = graph_size
 
         kernel_size = (5, 5)
-        self.conv1 = nn.Conv2d(in_channels, self.in_planes, kernel_size=kernel_size,
-                               padding=(kernel_size[0]//2, kernel_size[1]//2), bias=False)
+        self.e2e1 = Edge2Edge(in_channels, self.in_planes, graph_size)
         self.bn1 = nn.BatchNorm2d(self.in_planes)
 
         self.layers = []
@@ -106,7 +106,7 @@ class Edge2EdgeResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        out = self.activation(self.bn1(self.conv1(x)))
+        out = self.activation(self.bn1(self.e2e1(x)))
         for layer in self.layers:
             out = layer(out)
         return out

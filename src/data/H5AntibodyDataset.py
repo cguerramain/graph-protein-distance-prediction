@@ -22,7 +22,7 @@ class H5AntibodyDataset(data.Dataset):
 
         self.bins = get_bins(self.num_dist_bins)
         self.squared_bins = [(pow(l, 2), pow(r, 2)) for l, r in self.bins]
-        self.chain_ranges = self._get_chain_ranges()
+        self.all_ranges, self.chain_ranges = self._get_chain_ranges()
         self.indices = self._get_indices()
 
     def __getitem__(self, index):
@@ -137,6 +137,9 @@ class H5AntibodyDataset(data.Dataset):
             print('Bin weights: {}'.format(weights))
         return weights
 
+    def train_test_split(self):
+        pass
+
     def _get_chain_ranges(self):
         h5file = self.get_h5file()
         num_slices = len(h5file['pdb_id'])
@@ -145,6 +148,7 @@ class H5AntibodyDataset(data.Dataset):
         if num_slices == 1:
             return [(0, 0)]
 
+        chain_ranges = {}
         ranges = []
         left = 0
         pdb_ids, chain_ids = h5file['pdb_id'], h5file['chain_id']
@@ -156,16 +160,17 @@ class H5AntibodyDataset(data.Dataset):
             # new chain was hit. Add the previous chain's range to the list
             if prev_chain_id != chain_id or prev_pdb_id != pdb_id:
                 ranges.append((left, i - 1))
+                chain_ranges[prev_chain_id] = ranges[-1]
                 left = i
         ranges.append((left, num_slices - 1))  # Add last chain
-        return ranges
+        return ranges, chain_ranges
 
     def _get_indices(self):
-        if len(self.chain_ranges) == 0:
+        if len(self.all_ranges) == 0:
             return []
 
         indices = []
-        for chain_start, chain_end in self.chain_ranges:
+        for chain_start, chain_end in self.all_ranges:
             for slice_start in range(chain_start, chain_end + 1):
                 for slice_end in range(chain_start, chain_end + 1):
                     indices.append((slice_start, slice_end))
