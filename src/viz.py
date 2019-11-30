@@ -86,14 +86,14 @@ def heatmap2d(matrix, title='Heatmap', ylabel='', xlabel='', caption='',
 
     ax = plt.gca()
 
-    if not xticks:
+    if xticks:
         ax.set_xticks(np.arange(len(xticks)))
         ax.set_xticklabels(xticks)
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
                  rotation_mode="anchor")
 
         print(xticks)
-    if not yticks:
+    if yticks:
         ax.set_yticks(np.arange(len(yticks)))
         ax.set_yticklabels(yticks)
         print(yticks)
@@ -185,10 +185,10 @@ def _add_caption(label, caption):
 
 if __name__ == '__main__':
     def main():
-        from resnet_model import AntibodyResNet
-        saved_model = '/home/carlos/projects/graph-protein-distance-prediction/saved_models/Sequential_50blocks_10-11-19_15:48:43_epoch19.p'
+        from models import AntibodyResNet, AntibodyGraphResNet
+        saved_model = '../saved_models/Antibody_GCNN_epochs30_lr0p0001_batch_size64_num_blocks10_epoch30.p'
         h5file = '../data/ab_pdbs.h5'
-        resnet = AntibodyResNet(h5file, num_blocks=30)
+        resnet = AntibodyGraphResNet(h5file, num_blocks=10)
         model = resnet.model
         model.load_state_dict(torch.load(saved_model, map_location=torch.device('cpu')))
         for i in range(len(resnet.dataset)):

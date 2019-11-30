@@ -10,7 +10,7 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, log_in
     total_iters = min(max_iter, len(train_loader))
 
     model = model.to(device, non_blocking=True)
-    for batch_idx, (features, labels) in tqdm(enumerate(train_loader), total=total_iters):
+    for batch_idx, (features, labels, indices) in tqdm(enumerate(train_loader), total=total_iters):
         if batch_idx >= max_iter:
             break
         features, labels = features.to(device, non_blocking=True), labels.to(device, non_blocking=True)
@@ -37,6 +37,29 @@ def train_epoch(model, device, train_loader, optimizer, criterion, epoch, log_in
                100. * (batch_idx + 1) / len(train_loader), batch_loss))
 
 
+def test(model, device, test_loader, criterion, epoch):
+    if not device:
+        device = get_default_device()
+    model.eval()
+    with torch.no_grad():
+        running_loss = 0.
+        model = model.to(device, non_blocking=True)
+        for batch_idx, (features, labels, indices) in tqdm(enumerate(test_loader), total=len(test_loader)):
+            features, labels = features.to(device, non_blocking=True), labels.to(device, non_blocking=True)
+
+            # forward + backward + optimize
+            def handle_batch():
+                """Function done to ensure variables immediately get dealloced"""
+                outputs = model(features)
+                loss = criterion(outputs, labels)
+                return outputs, float(loss.item())
+
+            outputs, batch_loss = handle_batch()
+            running_loss += batch_loss
+        avg_loss = running_loss / len(test_loader)
+        print('Test Epoch: {} \tLoss: {:.6f}'.format(epoch, avg_loss))
+
+
 def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, epochs=10, class_weights=None,
                        save_file=None, **kwargs):
     if not device:
@@ -56,29 +79,6 @@ def train_and_validate(model, train_loader, test_loader, lr=1e-5, device=None, e
         train_epoch(model, device, train_loader, optimizer, criterion, epoch + 1, **kwargs)
         test(model, device, test_loader, criterion, epoch + 1)
         torch.save(model.state_dict(), '{}_epoch{}.{}'.format(save_file.split('.')[0], epoch + 1, save_file.split('.')[1]))
-
-
-def test(model, device, test_loader, criterion, epoch):
-    if not device:
-        device = get_default_device()
-    model.eval()
-    with torch.no_grad():
-        running_loss = 0.
-        model = model.to(device, non_blocking=True)
-        for batch_idx, (features, labels) in tqdm(enumerate(test_loader), total=len(test_loader)):
-            features, labels = features.to(device, non_blocking=True), labels.to(device, non_blocking=True)
-
-            # forward + backward + optimize
-            def handle_batch():
-                """Function done to ensure variables immediately get dealloced"""
-                outputs = model(features)
-                loss = criterion(outputs, labels)
-                return outputs, float(loss.item())
-
-            outputs, batch_loss = handle_batch()
-            running_loss += batch_loss
-        avg_loss = running_loss / len(test_loader)
-        print('Test Epoch: {} \tLoss: {:.6f}'.format(epoch, avg_loss))
 
 
 def get_default_device():

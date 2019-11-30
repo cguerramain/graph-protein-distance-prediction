@@ -30,15 +30,16 @@ class H5AntibodyDataset(data.Dataset):
         if isinstance(index, slice):
             pairs = []
             start, stop, step = index.indices(len(self))
-            for i in range(start, stop, step):
+            indices = list(range(start, stop, step))
+            for i in indices:
                 distance_matrix = self.get_distance_matrix(i)
                 sequence_info = self.get_positional_sequence_information(i)
                 pairs.append([sequence_info, distance_matrix])
-            return pairs
+            return pairs, indices
         else:
-            distance_matrix = self.get_distance_matrix(index)
             sequence_info = self.get_positional_sequence_information(index)
-            return sequence_info, distance_matrix
+            distance_matrix = self.get_distance_matrix(index)
+            return sequence_info, distance_matrix, index
 
     def __len__(self):
         return len(self.indices)
@@ -58,6 +59,10 @@ class H5AntibodyDataset(data.Dataset):
     def get_positional_sequence_information(self, index):
         h5index1, h5index2 = self.indices[index]
         return self._combine_sequences(h5index1, h5index2)
+
+    def get_sequence_length(self, index):
+        h5index, _ = self.indices[index]
+        return self.get_h5file()['sequence_length'][h5index]
 
     def get_h5file(self):
         """Returns a h5py File instance of the dataset - needed for handling multiple threads"""

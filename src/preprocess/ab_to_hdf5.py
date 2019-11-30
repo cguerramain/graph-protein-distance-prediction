@@ -1,7 +1,7 @@
 import h5py
 import warnings
 import numpy as np
-import pdb_parser as parser
+import src.preprocess.pdb_parser as parser
 from tqdm import tqdm
 from os import listdir, remove
 from os.path import join, isfile
@@ -42,6 +42,7 @@ def add_pdb_to_dataset(h5_file, pdb_file, idx, offset=0, slice_size=64):
     masks = parser.mask_aa_coords(pdb_file)
     for chain_id in seqs.keys():
         seq = np.array(parser.aa_seq_to_num(seqs[chain_id]), dtype=np.uint8)
+        seq_len = len(seq)
         indices = np.array(range(1, len(seq) + 1), dtype=np.int16)
         tert = np.array(terts[chain_id], dtype=float)
         mask = np.array(masks[chain_id], dtype=np.uint8)
@@ -64,8 +65,9 @@ def add_pdb_to_dataset(h5_file, pdb_file, idx, offset=0, slice_size=64):
 
             h5_file['pdb_id'][idx] = np.string_(pdb_id)
             h5_file['chain_id'][idx] = np.string_(chain_id)
-            h5_file['indices'][idx, :len(indices[i:i+slice_size])] = indices[i:i+slice_size]
+            h5_file['sequence_length'][idx] = seq_len
             h5_file['primary'][idx, :len(seq[i:i+slice_size])] = seq[i:i+slice_size]
+            h5_file['indices'][idx, :len(indices[i:i+slice_size])] = indices[i:i+slice_size]
             h5_file['tertiary'][idx, :len(tert[i:i+slice_size])] = tert[i:i+slice_size]
             h5_file['mask'][idx, :len(mask[i:i+slice_size])] = mask[i:i+slice_size]
 
@@ -107,7 +109,11 @@ def create_datasets(out_file_path, slice_size):
                                      compression='lzf', dtype='uint8',
                                      maxshape=(None, slice_size),
                                      fillvalue=0)
-    
+
+    seq_len = h5_out.create_dataset('sequence_length',
+                                    (1,),
+                                    maxshape=(None,), dtype='int16')
+
     return h5_out
 
 

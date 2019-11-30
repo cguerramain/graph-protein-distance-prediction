@@ -1,8 +1,6 @@
 import math
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.utils.data as data
-from torch.utils.data.sampler import SubsetRandomSampler
 
 
 class Edge2Edge(nn.Module):
