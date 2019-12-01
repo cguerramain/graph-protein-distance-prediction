@@ -1,7 +1,7 @@
 import pickle
 from os.path import isfile
 from datetime import datetime
-from src.models import AntibodyGraphResNet
+from src.models import AntibodyResNet
 from src.cli.cli_util import get_cli_input
 
 
@@ -11,9 +11,9 @@ if __name__ == '__main__':
         args = get_cli_input(desc)
         save_file = args.save_file
         if not save_file:
-            save_file = '../../saved_models/{}_{}.p'.format('Antibody_GCNN', datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
+            save_file = '../../saved_models/{}_{}.p'.format('Antibody_ResNet', datetime.now().strftime('%d-%m-%y_%H:%M:%S'))
 
-        resnet = AntibodyGraphResNet(args.h5file, num_blocks=args.num_blocks, batch_size=args.batch_size)
+        resnet = AntibodyResNet(args.h5file, num_blocks=args.num_blocks, batch_size=args.batch_size)
         if isfile(args.class_weight_file):
             print('Loading class weights from {} ...'.format(args.class_weight_file))
             class_weights = pickle.load(open(args.class_weight_file, 'rb'))
