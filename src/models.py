@@ -24,7 +24,7 @@ class AntibodyResNet(nn.Module):
         if isinstance(num_blocks, int):
             num_blocks = [num_blocks]
 
-        feature, _ = self.dataset[0]
+        feature, _, _ = self.dataset[0]
         self.in_channels = feature.shape[0]
         self.out_channels = self.dataset.num_dist_bins
 
