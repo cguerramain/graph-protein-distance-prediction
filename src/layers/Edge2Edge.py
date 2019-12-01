@@ -84,9 +84,8 @@ class Edge2EdgeResNet(nn.Module):
         self.num_layers = len(num_blocks)
         self.graph_size = graph_size
 
-        kernel_size = (5, 5)
-        self.e2e1 = Edge2Edge(in_channels, self.in_planes, graph_size)
-        self.bn1 = nn.BatchNorm2d(self.in_planes)
+        self.e2e1 = Edge2Edge(in_channels, self.init_planes, graph_size)
+        self.bn1 = nn.BatchNorm2d(self.init_planes)
 
         self.layers = []
         # Raise the number of planes by a power of two for each layer
