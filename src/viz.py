@@ -185,7 +185,7 @@ def _add_caption(label, caption):
 
 if __name__ == '__main__':
     def main():
-        from models import AntibodyResNet, AntibodyGraphResNet
+        from src.models import AntibodyResNet, AntibodyGraphResNet
         saved_model = '../saved_models/Antibody_GCNN_epochs30_lr0p0001_batch_size64_num_blocks10_epoch30.p'
         h5file = '../data/ab_pdbs.h5'
         resnet = AntibodyGraphResNet(h5file, num_blocks=10)
