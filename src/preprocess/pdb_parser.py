@@ -31,7 +31,7 @@ def filename_no_extension(file_path):
 def aa_seq(pdb_file):
     """
     Gets the full sequence of each protein chain from the SEQRES section of a 
-    PDB file, if present.
+    PDB file, if present. If it isn't present, returns None.
 
     :return: 
         A dictionary mapping each protein chain to its full sequence from the
@@ -51,7 +51,9 @@ def aa_seq(pdb_file):
         chain_id = l[11]
         seq_3letters = l[19:i+1]
         seqs[chain_id] += seq1(''.join(seq_3letters.split(' ')))
-    
+    if len(seq_lines) == 0:
+        return None
+
     return seqs
 
 
@@ -153,6 +155,10 @@ def mask_aa_coords(pdb_file):
     """
     full_seqs = aa_seq(pdb_file)
     subseqs = aa_seq_from_coords(pdb_file)
+
+    # No SEQRES section to double check, just add no mask
+    if full_seqs is None:
+        full_seqs = subseqs
     
     masks = {}
     for chain_id in full_seqs:

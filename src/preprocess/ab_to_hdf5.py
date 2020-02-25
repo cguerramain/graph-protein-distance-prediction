@@ -1,7 +1,8 @@
 import h5py
 import warnings
 import numpy as np
-import src.preprocess.pdb_parser as parser
+import src.preprocess.pdb_parser as pdb_parser
+import argparse
 from tqdm import tqdm
 from os import listdir, remove
 from os.path import join, isfile
@@ -32,16 +33,18 @@ def add_pdb_to_dataset(h5_file, pdb_file, idx, offset=0, slice_size=64):
     :param slice_size:
     :return:
     """
-    pdb_id = parser.filename_no_extension(pdb_file)
+    pdb_id = pdb_parser.filename_no_extension(pdb_file)
 
-    seqs = parser.aa_seq(pdb_file)
-    terts = parser.CB_coords(pdb_file)
+    seqs = pdb_parser.aa_seq(pdb_file)
+    if seqs is None:
+        seqs = pdb_parser.aa_seq_from_coords(pdb_file)
+    terts = pdb_parser.CB_coords(pdb_file)
     if not terts:
         warnings.warn('WARNING: Skipping {}'.format(pdb_file))
         return idx
-    masks = parser.mask_aa_coords(pdb_file)
+    masks = pdb_parser.mask_aa_coords(pdb_file)
     for chain_id in seqs.keys():
-        seq = np.array(parser.aa_seq_to_num(seqs[chain_id]), dtype=np.uint8)
+        seq = np.array(pdb_parser.aa_seq_to_num(seqs[chain_id]), dtype=np.uint8)
         seq_len = len(seq)
         indices = np.array(range(1, len(seq) + 1), dtype=np.int16)
         tert = np.array(terts[chain_id], dtype=float)
@@ -117,10 +120,27 @@ def create_datasets(out_file_path, slice_size):
     return h5_out
 
 
+def _cli():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('pdb_dir_path', type=str,
+                        help=('The path to the directory with preprocessed '
+                              'antibody PDB files'))
+    parser.add_argument('out_file_path', type=str,
+                        help='The output path to save the H5 dataset to')
+    parser.add_argument('--offset', type=int, default=8,
+                        help=('The amount of zero padding to append on each '
+                              'side of the protein sequence'))
+    parser.add_argument('--slice_size', type=int, default=64,
+                        help=('The size of each slice of a protein sequence. '
+                              'For instance, a slice_size of 64 would slice '
+                              'a sequence of length 192 into 3 equal length '
+                              'subsequences'))
+    args = parser.parse_args()
+    antibody_to_h5(pdb_dir=args.pdb_dir_path, out_file_path=args.out_file_path,
+                   offset=args.offset, slice_size=args.slice_size, print_progress=True,
+                   overwrite=True)
+
+
 if __name__ == '__main__':
-    def main():
-        pdb_dir = '../../data/pdbs/'
-        out_file_path = '../../data/ab_pdbs.h5'
-        antibody_to_h5(pdb_dir, out_file_path, offset=8, print_progress=True)
-    main()
+    _cli()
 
